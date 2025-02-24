@@ -1,13 +1,9 @@
-FROM golang:alpine as builder
-
-LABEL authors="Christian Muehlhaeuser: muesli@gmail.com"
-
+FROM golang:alpine3.20 AS build
 WORKDIR /go/markscribe
 COPY . .
 RUN go build
 
-FROM alpine
+FROM alpine:3.20 AS prod
 
-COPY --from=builder /go/markscribe/markscribe /go/bin/markscribe
-
+COPY --from=build /go/markscribe/markscribe /go/bin/markscribe
 ENTRYPOINT ["/go/bin/markscribe"]
