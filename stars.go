@@ -2,7 +2,7 @@ package main
 
 import (
 	"context"
-
+//	"fmt"
 	"github.com/shurcooL/githubv4"
 )
 
@@ -32,21 +32,30 @@ outer:
 			"after":    after,
 		}
 		err := gitHubClient.Query(context.Background(), &recentStarsQuery, variables)
+		
 		if err != nil {
 			panic(err)
 		}
 
+		if len(recentStarsQuery.User.Stars.Edges) <= 0 {
+			break outer
+		}
+
 		for _, v := range recentStarsQuery.User.Stars.Edges {
+			
 			if v.Node.IsPrivate {
 				continue
 			}
+
 			starredRepos = append(starredRepos, Star{
 				StarredAt: v.StarredAt.Time,
 				Repo:      repoFromQL(v.Node),
 			})
-			if len(starredRepos) >= count {
+			
+			if len(starredRepos) == count {
 				break outer
 			}
+
 			after = githubv4.NewString(v.Cursor)
 		}
 	}
