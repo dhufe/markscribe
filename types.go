@@ -12,6 +12,12 @@ type Contribution struct {
 	Repo       Repo
 }
 
+type Issue struct {
+	Repo       Repo
+	OccurredAt time.Time
+	Title      string
+}
+
 // Gist represents a gist.
 type Gist struct {
 	Name        string

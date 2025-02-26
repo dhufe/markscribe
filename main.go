@@ -49,6 +49,7 @@ func main() {
 		"followers":           recentFollowers,
 		"recentStars":         recentStars,
 		"gists":               gists,
+		"recentIssues":		   recentIssues,
 		"sponsors":            sponsors,
 		"repo":                repo,
 		/* RSS */
