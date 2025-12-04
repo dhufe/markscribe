@@ -1,0 +1,16 @@
+build_project:
+  image: docker.io/golang:alpine
+  tags: [docker]
+  stage: build
+  before_script:
+    - apk update --no-cache
+    - apk add --no-cache make zip golangci-lint
+    - go mod tidy
+  script:
+    - go build .
+  artifacts:
+#    paths:
+#
+#    expire_in: 1 hour
+  except:
+    - master
