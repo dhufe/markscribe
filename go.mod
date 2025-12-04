@@ -1,6 +1,6 @@
 module github.com/muesli/markscribe
 
-go 1.25
+go 1.24.5
 
 require (
 	github.com/KyleBanks/goodreads v0.0.0-20200527082926-28539417959b
