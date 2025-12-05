@@ -8,8 +8,9 @@ linting:
     - go mod tidy
   script:
     - golangci-lint run
+      --output.formats.text.colors=true
       --out-format colored-line-number
-      --out-format codeclimate:gl-code-quality-report.json
+      --output.code-climate.path gl-code-quality-report.json
   artifacts:
     reports:
       codequality: gl-code-quality-report.json
