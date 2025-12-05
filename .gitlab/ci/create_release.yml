@@ -1,80 +1,64 @@
 create_release:
-  image: registry.gitlab.com/gitlab-org/cli:latest
+  image: registry.gitlab.com/gitlab-org/cli:latest  # Aktualisiert auf v1.79.0
   tags: [docker]
   stage: release
   before_script:
-    - apk add --no-cache make zip go git
-    - go mod tidy
+    - apk add --no-cache make zip git jq  # `jq` für JSON-Manipulation
   script:
-    # Build erstellen
-    - make release
-
-    # Version aus Git-Tag oder fallback
+    # 1. Version bestimmen
     - |
       if [ -n "$CI_COMMIT_TAG" ]; then
-        # Pipeline wurde durch Tag ausgelöst
         VERSION=$CI_COMMIT_TAG
       else
-        # Kein Tag vorhanden, letzten Tag + Commit verwenden
         LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        COMMIT_SHORT=$(echo $CI_COMMIT_SHA | cut -c1-8)
+        COMMIT_SHORT=$(git rev-parse --short=8 HEAD)
         VERSION="$LAST_TAG-$COMMIT_SHORT"
       fi
-      
       echo "VERSION=$VERSION" >> release.env
-      echo "🚀 Creating release: $VERSION"
 
-    # Artefakte auflisten
-    - echo "📦 Generated artifacts:"
-    - ls -la bin/releases/
+    # 2. Artefakte hochladen (z. B. Binaries)
+    - mkdir -p releases
+    - cp bin/markscribe-* releases/  # Beispiel: Kopiere alle Binaries
+    - echo "📦 Artefakte vorbereitet: $(ls releases/)"
 
-    # Release-Beschreibung erstellen
+    # 3. Release-Notizen generieren
     - |
-      echo "RELEASE_DESCRIPTION<<EOF" >> release.env
-      echo "🚀 Automated Release $VERSION" >> release.env
+      echo "RELEASE_NOTES<<EOF" >> release.env
+      ## 🚀 Release $VERSION
+
+      **Changes since last release:**
+      $(git log --pretty=format:"- %s" $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD)
+
+      **Assets:**
+      - Linux: \`markscribe-linux-amd64.tar.gz\`
+      - macOS: \`markscribe-darwin-amd64.tar.gz\`
+      EOF
       echo "" >> release.env
-      echo "**Generated from:** develop → main merge" >> release.env
-      echo "**Commit:** [\`$(echo $CI_COMMIT_SHA | cut -c1-8)\`]($CI_PROJECT_URL/-/commit/$CI_COMMIT_SHA)" >> release.env
-      echo "**Pipeline:** [#$CI_PIPELINE_ID]($CI_PIPELINE_URL)" >> release.env
-      echo "" >> release.env
-      echo "## 📋 Recent Changes" >> release.env
-      git log --oneline --pretty=format:"* %s" $(git describe --tags --abbrev=0 2>/dev/null || echo "HEAD~10")..HEAD >> release.env
-      echo "" >> release.env
-      echo "" >> release.env
-      echo "## 📦 Installation" >> release.env
-      echo "\`\`\`bash" >> release.env
-      echo "# Download for your platform:" >> release.env
-      echo "curl -L $CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/bin/releases/markscribe-linux-amd64.tar.gz" >> release.env
-      echo "tar -xzf markscribe-linux-amd64.tar.gz" >> release.env
-      echo "./markscribe-linux-amd64 --help" >> release.env
-      echo "\`\`\`" >> release.env
-      echo "EOF" >> release.env
+
+    # 4. Release mit `glab` erstellen (korrekte JSON-Struktur!)
+    - |
+      glab release create \
+        --repo "$CI_PROJECT_PATH" \
+        --tag-name "$VERSION" \
+        --name "Release $VERSION" \
+        --description "$(cat release.env | grep -A 20 'RELEASE_NOTES<<EOF' | tail -n 20)" \
+        --assets-link '{
+          "name": "Linux Binary",
+          "url": "'"$CI_PROJECT_URL"'-/jobs/'"$CI_JOB_ID"'/artifacts/raw/releases/markscribe-linux-amd64.tar.gz"
+        }' \
+        --assets-link '{
+          "name": "macOS Binary",
+          "url": "'"$CI_PROJECT_URL"'-/jobs/'"$CI_JOB_ID"'/artifacts/raw/releases/markscribe-darwin-amd64.tar.gz"
+        }'
 
   artifacts:
     paths:
-      - bin/release/markscribe-*.tar.gz
-      - bin/release/markscribe-*.zip
-    expire_in: 4 weeks
-    reports:
-      dotenv: release.env
+      - releases/
+    expire_in: 1 week
 
-  release:
-    tag_name: $VERSION
-    name: 'Release $VERSION'
-    description: $RELEASE_DESCRIPTION
-    assets:
-      links:
-        - name: '🐧 Linux AMD64 Binary'
-          url: '$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/bin/releases/markscribe-linux-amd64.tar.gz'
-        - name: '🍎 macOS Intel (AMD64) Binary'
-          url: '$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/bin/releases/markscribe-darwin-amd64.tar.gz'
-        - name: '🍎 macOS Apple Silicon (ARM64) Binary'
-          url: '$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/bin/releases/markscribe-darwin-arm64.tar.gz'
-        - name: '🪟 Windows AMD64 Binary'
-          url: '$CI_PROJECT_URL/-/jobs/$CI_JOB_ID/artifacts/file/bin/releases/markscribe-windows-amd64.zip'
   rules:
-    - if: $CI_COMMIT_TAG               # Offizielles Release (automatisch)
-    - if: $CI_COMMIT_BRANCH == "master"  # Manuelles Pre-Release
+    - if: $CI_COMMIT_TAG  # Automatisch für Tags
+    - if: $CI_COMMIT_BRANCH == "master" && $CI_PIPELINE_SOURCE == "push"  # Optional: Manuell für master
       when: manual
       variables:
         VERSION: "nightly-$CI_COMMIT_SHORT_SHA"  # Beispiel: nightly-abc1234
