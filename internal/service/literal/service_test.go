@@ -244,7 +244,7 @@ func TestService_CurrentlyReading_WithCompleteBookData(t *testing.T) {
 		{
 			Title:       "Domain-Driven Design",
 			Subtitle:    "Tackling Complexity in the Heart of Software",
-			Authors:     []literaladapter.Author{{"Eric Evans"}},
+			Authors:     []literaladapter.Author{{Name: "Eric Evans"}},
 			Description: "A comprehensive guide to domain-driven design",
 			Slug:        "domain-driven-design",
 		},
