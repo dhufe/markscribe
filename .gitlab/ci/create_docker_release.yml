@@ -3,9 +3,6 @@ create_github_package:
   image: quay.io/podman/stable
   tags: [docker]
   before_script:
-    - apk update --no-cache
-    - apk add --no-cache git  # Git für Tag-Erkennung
-    # Sichere Anmeldung mit GitHub Container Registry (GHCR)
     - echo "$GITHUB_TOKEN" | podman login ghcr.io -u "$GITHUB_USERNAME" --password-stdin
   script:
     - |
