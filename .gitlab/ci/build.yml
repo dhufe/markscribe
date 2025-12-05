@@ -7,10 +7,11 @@ build_project:
     - apk add --no-cache make zip golangci-lint
     - go mod tidy
   script:
-    - go build .
+    - make release
   artifacts:
-#    paths:
-#
-#    expire_in: 1 hour
+    paths:
+      - bin/release/markscribe-*.tar.gz
+      - bin/release/markscribe-*.zip
+    expire_in: 1 hour
   except:
-    - master
+    - main
