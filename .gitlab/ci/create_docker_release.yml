@@ -1,5 +1,5 @@
 create_github_package:
-  stage: build
+  stage: release
   image: quay.io/podman/stable
   tags: [docker]
   before_script:
