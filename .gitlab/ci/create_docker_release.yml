@@ -24,7 +24,7 @@ create_github_package:
       podman push ghcr.io/dhufe/markscribe:latest
 
   only:
-    - main
+    - master
 
   # Optional: Automatisch bei merge oder manuell
   when: manual  # Ändere zu "on_success" für automatische Releases
