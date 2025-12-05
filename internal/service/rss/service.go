@@ -1,8 +1,6 @@
 package rss
 
 import (
-	"context"
-
 	"hufschlaeger.net/markscribe/internal/domain"
 	"hufschlaeger.net/markscribe/internal/usecase/ports"
 )
@@ -15,7 +13,7 @@ type Service struct {
 func New(rss ports.RssFeedPort) *Service { return &Service{rss: rss} }
 
 func (s *Service) LastFeedEntries(url string, count int) []domain.RSSEntry {
-	entries, err := s.rss.RecentFeedEntries(context.Background(), url, count)
+	entries, err := s.rss.RecentFeedEntries(url, count)
 	if err != nil {
 		panic(err)
 	}
