@@ -9,7 +9,6 @@ linting:
   script:
     - golangci-lint run
       --output.formats.text.colors=true
-      #--out-format colored-line-number
       --output.code-climate.path gl-code-quality-report.json
   artifacts:
     reports:
