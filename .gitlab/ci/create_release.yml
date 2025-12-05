@@ -38,7 +38,7 @@ create_release:
     - >
       glab release create
       --repo "$CI_PROJECT_PATH"
-      --tag-name "$VERSION"
+      --tag "$VERSION"
       --name "Release $VERSION"
       --description "$(awk '/RELEASE_NOTES<<EOF/{flag=1;next}/EOF/{flag=0}flag' release.env)"
       --assets-link '{"name":"Linux Binary","url":"'"${CI_PROJECT_URL}"'/-/jobs/'"${CI_JOB_ID}"'/artifacts/raw/releases/markscribe-linux-amd64.tar.gz"}'
