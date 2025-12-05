@@ -10,8 +10,8 @@ build_project:
     - make release
   artifacts:
     paths:
-      - bin/release/markscribe-*.tar.gz
-      - bin/release/markscribe-*.zip
+      - bin/releases/markscribe-*.tar.gz
+      - bin/releases/markscribe-*.zip
     expire_in: 1 hour
   except:
     - main
