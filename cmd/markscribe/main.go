@@ -1,4 +1,4 @@
-package markscribe
+package main
 
 import (
 	"context"
@@ -129,7 +129,12 @@ func main() {
 			fmt.Println("Can't create:", err)
 			os.Exit(1)
 		}
-		defer f.Close() //nolint: errcheck
+		defer func(f *os.File) {
+			err := f.Close()
+			if err != nil {
+				fmt.Println("Can't close file:", err)
+			}
+		}(f)
 		w = f
 	}
 
