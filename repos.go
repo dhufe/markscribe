@@ -243,7 +243,7 @@ func recentReleases(count int) []Repo {
 					continue
 				}
 				if v.Node.Releases.Nodes[0].TagName == "" ||
-					v.Node.Releases.Nodes[0].PublishedAt.Time.IsZero() {
+					v.Node.Releases.Nodes[0].PublishedAt.IsZero() {
 					continue
 				}
 				r.LastRelease = releaseFromQL(v.Node.Releases)
