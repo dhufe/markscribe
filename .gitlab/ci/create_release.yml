@@ -1,5 +1,5 @@
 create_release:
-  image: registry.gitlab.com/gitlab-org/release-cli:latest
+  image: registry.gitlab.com/gitlab-org/cli:latest
   tags: [docker]
   stage: release
   before_script:
