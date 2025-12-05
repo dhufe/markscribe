@@ -7,19 +7,31 @@ import (
 	"net/http"
 	"os"
 	"strings"
-	"text/template"
+	texttmpl "text/template"
 	"time"
 
-	"github.com/KyleBanks/goodreads"
+	kbgoodreads "github.com/KyleBanks/goodreads"
 	"github.com/shurcooL/githubv4"
 	"golang.org/x/oauth2"
+	githubsvc "hufschlaeger.net/markscribe/internal/service/github"
+	goodreadssvc "hufschlaeger.net/markscribe/internal/service/goodreads"
+	literalsvc "hufschlaeger.net/markscribe/internal/service/literal"
+	templatesvc "hufschlaeger.net/markscribe/internal/service/template"
+
+	githubadapter "hufschlaeger.net/markscribe/internal/adapters/github"
+	goodreadsadapter "hufschlaeger.net/markscribe/internal/adapters/goodreads"
+	literaladapter "hufschlaeger.net/markscribe/internal/adapters/literal"
+	"hufschlaeger.net/markscribe/internal/usecase/ports"
 )
 
 var (
 	gitHubClient    *githubv4.Client
-	goodReadsClient *goodreads.Client
+	goodReadsClient *kbgoodreads.Client
 	goodReadsID     string
 	username        string
+	gh              ports.GithubPort
+	gr              ports.GoodReadsPort
+	lit             ports.LiteralPort
 
 	write = flag.String("write", "", "write output to")
 )
@@ -38,38 +50,6 @@ func main() {
 		os.Exit(1)
 	}
 
-	tpl, err := template.New("tpl").Funcs(template.FuncMap{
-		/* GitHub */
-		"recentContributions": recentContributions,
-		"recentPullRequests":  recentPullRequests,
-		"recentRepos":         recentRepos,
-		"recentForks":         recentForks,
-		"recentReleases":      recentReleases,
-		"followers":           recentFollowers,
-		"recentStars":         recentStars,
-		"gists":               gists,
-		"recentIssues":		   recentIssues,
-		"sponsors":            sponsors,
-		"repo":                repo,
-		/* RSS */
-		"rss": rssFeed,
-		/* GoodReads */
-		"goodReadsReviews":          goodReadsReviews,
-		"goodReadsCurrentlyReading": goodReadsCurrentlyReading,
-		/* Literal.club */
-		"literalClubCurrentlyReading": literalClubCurrentlyReading,
-		/* Utils */
-		"humanize": humanized,
-		"reverse":  reverse,
-		"now":      time.Now,
-		"contains": strings.Contains,
-		"toLower":  strings.ToLower,
-	}).Parse(string(tplIn))
-	if err != nil {
-		fmt.Println("Can't parse template:", err)
-		os.Exit(1)
-	}
-
 	var httpClient *http.Client
 	gitHubToken := os.Getenv("GITHUB_TOKEN")
 	goodReadsToken := os.Getenv("GOODREADS_TOKEN")
@@ -81,14 +61,62 @@ func main() {
 	}
 
 	gitHubClient = githubv4.NewClient(httpClient)
-	goodReadsClient = goodreads.NewClient(goodReadsToken)
+	goodReadsClient = kbgoodreads.NewClient(goodReadsToken)
+
+	// Wire the GitHub adapter (available even without token; client can be nil for limited usage)
+	gh = githubadapter.New(gitHubClient)
 
 	if len(gitHubToken) > 0 {
-		username, err = getUsername()
+		username, err = gh.ViewerLogin(context.Background())
 		if err != nil {
 			fmt.Println("Can't retrieve GitHub profile:", err)
 			os.Exit(1)
 		}
+	}
+
+	// Wire the GoodReads adapter (requires token + user ID)
+	gr = goodreadsadapter.New(goodReadsClient, goodReadsID)
+
+	// Wire the Literal.club adapter
+	lit = literaladapter.New()
+
+	// Build per-port services and the template composition service
+	ghSvc := githubsvc.New(gh, username)
+	grSvc := goodreadssvc.New(gr)
+	litSvc := literalsvc.New(lit)
+	tplSvc := templatesvc.New(ghSvc, grSvc, litSvc)
+
+	// Create template with template service functions to declutter main
+	tpl, err := texttmpl.New("tpl").Funcs(texttmpl.FuncMap{
+		/* GitHub */
+		"recentContributions": tplSvc.RecentContributions,
+		"recentPullRequests":  tplSvc.RecentPullRequests,
+		"recentRepos":         tplSvc.RecentRepos,
+		"recentForks":         tplSvc.RecentForks,
+		"recentReleases":      tplSvc.RecentReleases,
+		"followers":           tplSvc.Followers,
+		"recentStars":         tplSvc.RecentStars,
+		"gists":               tplSvc.Gists,
+		"recentIssues":        tplSvc.RecentIssues,
+		"sponsors":            tplSvc.Sponsors,
+		"repo":                tplSvc.Repo,
+		/* RSS */
+		"rss": rssFeed,
+		/* GoodReads */
+		"goodReadsReviews":          tplSvc.GoodReadsReviews,
+		"goodReadsCurrentlyReading": tplSvc.GoodReadsCurrentlyReading,
+		/* Literal.club */
+		"literalClubCurrentlyReading": tplSvc.LiteralCurrentlyReading,
+		/* Utils */
+		"humanize": tplSvc.Humanize,
+		"reverse":  tplSvc.Reverse,
+		"now":      time.Now,
+		"contains": strings.Contains,
+		"toLower":  strings.ToLower,
+	}).Parse(string(tplIn))
+	if err != nil {
+		fmt.Println("Can't parse template:", err)
+		os.Exit(1)
 	}
 
 	w := os.Stdout

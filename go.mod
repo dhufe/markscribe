@@ -1,4 +1,4 @@
-module github.com/muesli/markscribe
+module hufschlaeger.net/markscribe
 
 go 1.24.5
 
