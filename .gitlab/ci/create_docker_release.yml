@@ -17,7 +17,7 @@ create_github_package:
       fi
       
       echo "🚀 Creating release: $VERSION"
-      podman build -t ghcr.io/dhufe/markscribe:$VERSION
+      podman build -t ghcr.io/dhufe/markscribe:$VERSION -f Dockerfile .
       podman push ghcr.io/dhufe/markscribe:$VERSION
       podman tag ghcr.io/dhufe/markscribe:$VERSION ghcr.io/dhufe/markscribe:latest
       podman push ghcr.io/dhufe/markscribe:latest
