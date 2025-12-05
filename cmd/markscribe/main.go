@@ -22,6 +22,7 @@ import (
 	githubadapter "hufschlaeger.net/markscribe/internal/adapters/github"
 	goodreadsadapter "hufschlaeger.net/markscribe/internal/adapters/goodreads"
 	literaladapter "hufschlaeger.net/markscribe/internal/adapters/literal"
+	rssadapter "hufschlaeger.net/markscribe/internal/adapters/rss"
 	"hufschlaeger.net/markscribe/internal/usecase/ports"
 )
 
@@ -81,7 +82,7 @@ func main() {
 
 	// Wire the Literal.club adapter
 	lit = literaladapter.New()
-
+	rss = rssadapter.New()
 	// Build per-port services and the template composition service
 	ghSvc := githubsvc.New(gh, username)
 	grSvc := goodreadssvc.New(gr)

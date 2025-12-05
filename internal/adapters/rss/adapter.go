@@ -6,20 +6,16 @@ import (
 )
 
 type Adapter struct {
-	parser *gofeed.Parser
 }
 
-func New() *Adapter { // constructor kept simple for now
-	feedParser := gofeed.NewParser()
-	return &Adapter{parser: feedParser}
-}
+func New() *Adapter { return &Adapter{} }
 
 func (a *Adapter) RecentFeedEntries(url string, count int) (
 	[]domain.RSSEntry, error) {
-
+	var parser = gofeed.NewParser()
 	var r []domain.RSSEntry
 
-	feed, err := a.parser.ParseURL(url)
+	feed, err := parser.ParseURL(url)
 	if err != nil {
 		panic(err)
 	}
