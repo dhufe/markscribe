@@ -3,7 +3,6 @@ create_github_package:
   image: quay.io/podman/stable
   tags: [docker]
   before_script:
-    - apk update --no-cache
     - echo $GITHUB_TOKEN | podman login ghcr.io -u USERNAME --password-stdin
   script:
     - |
