@@ -1,16 +1,19 @@
 linting:
   variables:
-    GOLANGCI_LINT_VERSION: '2.4.0'
-  image: ${GITLAB_DEPENDENCY_PROXY}golangci/golangci-lint:v$GOLANGCI_LINT_VERSION
+    GOLANGCI_LINT_VERSION: '2.7.1'
+  image: ${GITLAB_DEPENDENCY_PROXY}golangci/golangci-lint:v${GOLANGCI_LINT_VERSION}
   tags: [docker]
   stage: lint
   before_script:
     - go mod tidy
   script:
-    - golangci-lint run --output.text.path=stdout --output.text.colors=false --output.text.print-issued-lines=false --output.code-climate.path=gl-code-quality-report.json
+    - golangci-lint run
+      --out-format colored-line-number
+      --out-format codeclimate:gl-code-quality-report.json
   artifacts:
     reports:
       codequality: gl-code-quality-report.json
     paths:
       - gl-code-quality-report.json
+    when: always
   allow_failure: false
