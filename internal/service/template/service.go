@@ -7,11 +7,12 @@ import (
 
 	"github.com/KyleBanks/goodreads/responses"
 	"github.com/dustin/go-humanize"
+	literalpkg "hufschlaeger.net/markscribe/internal/adapters/literal"
 	domain "hufschlaeger.net/markscribe/internal/domain"
 	githubsvc "hufschlaeger.net/markscribe/internal/service/github"
 	goodreadssvc "hufschlaeger.net/markscribe/internal/service/goodreads"
 	literalsvc "hufschlaeger.net/markscribe/internal/service/literal"
-	literalpkg "hufschlaeger.net/markscribe/literal"
+	rsssvc "hufschlaeger.net/markscribe/internal/service/rss"
 )
 
 // Service composes per-port services and exposes template-facing API.
@@ -19,10 +20,11 @@ type Service struct {
 	gh  *githubsvc.Service
 	gr  *goodreadssvc.Service
 	lit *literalsvc.Service
+	rss *rsssvc.Service
 }
 
-func New(gh *githubsvc.Service, gr *goodreadssvc.Service, lit *literalsvc.Service) *Service {
-	return &Service{gh: gh, gr: gr, lit: lit}
+func New(gh *githubsvc.Service, gr *goodreadssvc.Service, lit *literalsvc.Service, rss *rsssvc.Service) *Service {
+	return &Service{gh: gh, gr: gr, lit: lit, rss: rss}
 }
 
 // GitHub
@@ -51,6 +53,11 @@ func (s *Service) GoodReadsCurrentlyReading(count int) []responses.Review {
 // Literal.club
 func (s *Service) LiteralCurrentlyReading(count int) []literalpkg.Book {
 	return s.lit.CurrentlyReading(count)
+}
+
+// LatestRssFeeds RSS
+func (s *Service) LatestRssFeeds(url string, count int) []domain.RSSEntry {
+	return s.rss.LastFeedEntries(url, count)
 }
 
 // Utils (moved from root template.go to declutter main package)

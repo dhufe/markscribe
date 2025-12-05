@@ -339,6 +339,7 @@ func (a *Adapter) RecentReleases(ctx context.Context, username string, count int
 			if !r.LastRelease.PublishedAt.IsZero() {
 				out = append(out, r)
 				if len(out) >= count {
+					continue
 					// don't early return; still need to set cursor for next loop termination
 				}
 			}

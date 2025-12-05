@@ -18,7 +18,7 @@ GOFMT=gofmt
 GOLINT=golangci-lint
 
 # Build configuration
-MAIN_FILE=cmd/main.go
+MAIN_FILE=cmd/markscribe/main.go
 BUILD_FLAGS=-ldflags="-s -w -X main.Version=$(VERSION) -X main.BuildTime=$(BUILD_TIME)"
 BUILD_DIR=./bin
 VERSION?=$(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")

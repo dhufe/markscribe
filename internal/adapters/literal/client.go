@@ -1,4 +1,4 @@
-package literal
+package literaladapter
 
 import (
 	"context"
