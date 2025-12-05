@@ -9,7 +9,7 @@ require (
 	github.com/dustin/go-humanize v1.0.1
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/shurcooL/githubv4 v0.0.0-20230704055353-e73b648ccb39
-	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f
+	github.com/shurcooL/graphql v0.0.0-20230722043721-ed46e5a46466
 	golang.org/x/oauth2 v0.33.0
 )
 
