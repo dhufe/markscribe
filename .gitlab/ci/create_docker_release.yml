@@ -1,0 +1,30 @@
+create_github_package:
+  stage: release
+  image: quay.io/podman/stable
+  tags: [docker]
+  before_script:
+    - apk update --no-cache
+    - echo $GITHUB_TOKEN | podman login ghcr.io -u USERNAME --password-stdin
+  script:
+    - |
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        # Pipeline wurde durch Tag ausgelöst
+        VERSION=$CI_COMMIT_TAG
+      else
+        # Kein Tag vorhanden, letzten Tag + Commit verwenden
+        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+        COMMIT_SHORT=$(echo $CI_COMMIT_SHA | cut -c1-8)
+        VERSION="$LAST_TAG-$COMMIT_SHORT"
+      fi
+      
+      echo "🚀 Creating release: $VERSION"
+      podman build -t ghcr.io/dhufe/markscribe:$VERSION
+      podman push ghcr.io/dhufe/markscribe:$VERSION
+      podman tag ghcr.io/dhufe/markscribe:$VERSION ghcr.io/dhufe/markscribe:latest
+      podman push ghcr.io/dhufe/markscribe:latest
+
+  only:
+    - main
+
+  # Optional: Automatisch bei merge oder manuell
+  when: manual  # Ändere zu "on_success" für automatische Releases
