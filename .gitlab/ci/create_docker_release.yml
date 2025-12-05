@@ -3,27 +3,42 @@ create_github_package:
   image: quay.io/podman/stable
   tags: [docker]
   before_script:
-    - echo $GITHUB_TOKEN | podman login ghcr.io -u USERNAME --password-stdin
+    - apk update --no-cache
+    - apk add --no-cache git  # Git für Tag-Erkennung
+    # Sichere Anmeldung mit GitHub Container Registry (GHCR)
+    - echo "$GITHUB_TOKEN" | podman login ghcr.io -u "$GITHUB_USERNAME" --password-stdin
   script:
     - |
+      # Version bestimmen (Tag oder Fallback)
       if [ -n "$CI_COMMIT_TAG" ]; then
-        # Pipeline wurde durch Tag ausgelöst
         VERSION=$CI_COMMIT_TAG
       else
-        # Kein Tag vorhanden, letzten Tag + Commit verwenden
         LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        COMMIT_SHORT=$(echo $CI_COMMIT_SHA | cut -c1-8)
+        COMMIT_SHORT=$(git rev-parse --short=8 HEAD)
         VERSION="$LAST_TAG-$COMMIT_SHORT"
       fi
-      
-      echo "🚀 Creating release: $VERSION"
-      podman build -t ghcr.io/dhufe/markscribe:$VERSION -f Dockerfile .
+
+      echo "🚀 Building and pushing image: ghcr.io/dhufe/markscribe:$VERSION"
+
+      # Build & Push mit Version-Tag
+      podman build -t ghcr.io/dhufe/markscribe:$VERSION .
       podman push ghcr.io/dhufe/markscribe:$VERSION
-      podman tag ghcr.io/dhufe/markscribe:$VERSION ghcr.io/dhufe/markscribe:latest
-      podman push ghcr.io/dhufe/markscribe:latest
 
-  only:
-    - master
+      # Nur `latest` setzen, wenn es ein offizielles Release (Tag) ist
+      if [ -n "$CI_COMMIT_TAG" ]; then
+        podman tag ghcr.io/dhufe/markscribe:$VERSION ghcr.io/dhufe/markscribe:latest
+        podman push ghcr.io/dhufe/markscribe:latest
+        echo "✅ Pushed 'latest' tag (official release)"
+      else
+        echo "⚠️ Skipping 'latest' tag (not an official release)"
+      fi
 
-  # Optional: Automatisch bei merge oder manuell
-  when: manual  # Ändere zu "on_success" für automatische Releases
+  # Regeln für Ausführung (Tags + manuell von main)
+  rules:
+    - if: $CI_COMMIT_TAG               # Automatisch für Tags (Releases)
+    - if: $CI_COMMIT_BRANCH == "master"  # Manuell für main (Pre-Releases)
+      when: manual
+
+  # Variablen (sollten in GitLab CI/CD-Variablen definiert sein)
+  variables:
+    GITHUB_USERNAME: "dhufe"  # Oder über CI/CD-Variable setzen
