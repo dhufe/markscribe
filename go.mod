@@ -10,7 +10,7 @@ require (
 	github.com/mmcdole/gofeed v1.3.0
 	github.com/shurcooL/githubv4 v0.0.0-20230704055353-e73b648ccb39
 	github.com/shurcooL/graphql v0.0.0-20181231061246-d48a9a75455f
-	golang.org/x/oauth2 v0.27.0
+	golang.org/x/oauth2 v0.33.0
 )
 
 require (
