@@ -8,7 +8,6 @@ linting:
     - go mod tidy
   script:
     - golangci-lint run
-      --output.formats.text.colors=true
       --output.code-climate.path gl-code-quality-report.json
   artifacts:
     reports:
