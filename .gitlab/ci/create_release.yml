@@ -4,7 +4,10 @@ create_release:
   stage: release
   before_script:
     - apk add --no-cache git
-    - git fetch --tags  # Tags laden
+    - git fetch --tags
+    # glab konfigurieren
+    - glab auth login --hostname ${CI_SERVER_HOST} --token ${CI_JOB_TOKEN}
+    - glab config set --global host ${CI_SERVER_HOST}
   script:
     - |
       # 1. Version bestimmen (Tag oder Fallback)
