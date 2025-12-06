@@ -2,6 +2,7 @@ package githubadapter
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/shurcooL/githubv4"
 
@@ -34,6 +35,7 @@ type qlRepository struct {
 	URL           githubv4.String
 	Description   githubv4.String
 	IsPrivate     githubv4.Boolean
+	PushedAt      githubv4.DateTime // ← NEU hinzufügen!
 	Stargazers    struct {
 		TotalCount githubv4.Int
 	}
@@ -157,21 +159,13 @@ type recentStarsQuery struct {
 
 type recentContributionsQuery struct {
 	User struct {
-		Login                   githubv4.String
-		ContributionsCollection struct {
-			CommitContributionsByRepository []struct {
-				Contributions struct {
-					Edges []struct {
-						Cursor githubv4.String
-						Node   struct {
-							OccurredAt githubv4.DateTime
-						}
-					}
-				} `graphql:"contributions(first: 1)"`
-				Repository qlRepository
-			} `graphql:"commitContributionsByRepository(maxRepositories: 100)"`
-		}
-	} `graphql:"user(login:$username)"`
+		Login        githubv4.String
+		Repositories struct {
+			Edges []struct {
+				Node qlRepository
+			}
+		} `graphql:"repositories(first: 100, privacy: PUBLIC, isFork: false, ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER], orderBy: {field: PUSHED_AT, direction: DESC})"`
+	} `graphql:"user(login: $username)"`
 }
 
 type recentIssuesQuery struct {
@@ -356,24 +350,37 @@ func (a *Adapter) RecentReleases(ctx context.Context, username string, count int
 // RecentContributions returns commit contributions grouped by repository.
 func (a *Adapter) RecentContributions(ctx context.Context, username string, count int) ([]domain.Contribution, error) {
 	var q recentContributionsQuery
+
 	variables := map[string]interface{}{
 		"username": githubv4.String(username),
 	}
+
 	if err := a.client.Query(ctx, &q, variables); err != nil {
 		return nil, err
 	}
+
 	var out []domain.Contribution
-	for _, v := range q.User.ContributionsCollection.CommitContributionsByRepository {
+
+	for _, edge := range q.User.Repositories.Edges {
+		repo := edge.Node
+
+		// Filter Meta-Repo (username/username)
+		if string(repo.NameWithOwner) == fmt.Sprintf("%s/%s", username, username) {
+			continue
+		}
+
 		c := domain.Contribution{
-			Repo:       repoFromQL(v.Repository),
-			OccurredAt: v.Contributions.Edges[0].Node.OccurredAt.Time,
+			Repo:       repoFromQL(repo),
+			OccurredAt: repo.PushedAt.Time, // ← Verwendet jetzt PushedAt statt OccurredAt
 		}
 		out = append(out, c)
+
+		// Limit erreicht?
+		if len(out) >= count {
+			break
+		}
 	}
-	// Limit at adapter level conservatively if oversize
-	if len(out) > count {
-		out = out[:count]
-	}
+
 	return out, nil
 }
 
