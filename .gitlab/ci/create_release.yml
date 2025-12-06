@@ -6,7 +6,7 @@ create_release:
     - apk add --no-cache git
     - git fetch --tags
     # glab konfigurieren
-    - glab auth login --hostname ${CI_SERVER_HOST} --token ${CI_JOB_TOKEN}
+    - glab auth login --hostname ${CI_SERVER_HOST} --token ${RELEASE_TOKEN}
     - glab config set --global host ${CI_SERVER_HOST}
   script:
     - |
