@@ -9,28 +9,21 @@ create_github_package:
       # Version bestimmen (Tag oder Fallback)
       if [ -n "$CI_COMMIT_TAG" ]; then
         VERSION=$CI_COMMIT_TAG
-      else
-        LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
-        COMMIT_SHORT=$(git rev-parse --short=8 HEAD)
-        VERSION="$LAST_TAG-$COMMIT_SHORT"
+      
+        echo "🚀 Building and pushing image: ghcr.io/dhufe/markscribe:$VERSION"
+
+        # Build & Push mit Version-Tag
+        podman build -t ghcr.io/dhufe/markscribe:$VERSION .
+        podman push ghcr.io/dhufe/markscribe:$VERSION
+      
+        podman tag ghcr.io/dhufe/markscribe:$VERSION ghcr.io/dhufe/markscribe:latest
+        podman push ghcr.io/dhufe/markscribe:latest
+        echo "✅ Pushed 'latest' tag (official release)"
       fi
 
-      echo "🚀 Building and pushing image: ghcr.io/dhufe/markscribe:$VERSION"
-
-      # Build & Push mit Version-Tag
-      podman build -t ghcr.io/dhufe/markscribe:$VERSION .
-      podman push ghcr.io/dhufe/markscribe:$VERSION
-      
-      podman tag ghcr.io/dhufe/markscribe:$VERSION ghcr.io/dhufe/markscribe:latest
-      podman push ghcr.io/dhufe/markscribe:latest
-      echo "✅ Pushed 'latest' tag (official release)"
-
-
-  # Regeln für Ausführung (Tags + manuell von main)
+  # Regeln für Ausführung
   rules:
-    - if: $CI_COMMIT_TAG               # Automatisch für Tags (Releases)
-    - if: $CI_COMMIT_BRANCH == "master"  # Manuell für main (Pre-Releases)
-      when: manual
+    - if: '$CI_COMMIT_TAG'
 
   # Variablen (sollten in GitLab CI/CD-Variablen definiert sein)
   variables:

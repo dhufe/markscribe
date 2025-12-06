@@ -54,14 +54,26 @@ create_release:
       # 4. Asset-Links hinzufügen
       glab api --method POST \
         "/projects/${CI_PROJECT_ID}/releases/${VERSION}/assets/links" \
-        -f name="Linux Binary" \
+        -f name="Linux Binary (amd64)" \
         -f url="${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/raw/releases/markscribe-linux-amd64.tar.gz" \
         -f link_type="package" || true
       
       glab api --method POST \
         "/projects/${CI_PROJECT_ID}/releases/${VERSION}/assets/links" \
-        -f name="macOS Binary" \
+        -f name="macOS Binary (amd64)" \
         -f url="${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/raw/releases/markscribe-darwin-amd64.tar.gz" \
+        -f link_type="package" || true
+      
+      glab api --method POST \
+        "/projects/${CI_PROJECT_ID}/releases/${VERSION}/assets/links" \
+        -f name="macOS Binary (arm64)" \
+        -f url="${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/raw/releases/markscribe-darwin-arm64.tar.gz" \
+        -f link_type="package" || true
+
+      glab api --method POST \
+        "/projects/${CI_PROJECT_ID}/releases/${VERSION}/assets/links" \
+        -f name="Windows Binary (amd64)" \
+        -f url="${CI_PROJECT_URL}/-/jobs/${CI_JOB_ID}/artifacts/raw/releases/markscribe-windows-amd64.zip" \
         -f link_type="package" || true
 
     - mkdir -p releases && cp bin/markscribe-* releases/ 2>/dev/null || true
