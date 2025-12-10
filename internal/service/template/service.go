@@ -1,13 +1,24 @@
 package template
 
 import (
+	"context"
 	"fmt"
+	"net/http"
+	"os"
 	"reflect"
+	"strings"
+	texttmpl "text/template"
 	"time"
 
+	kbgoodreads "github.com/KyleBanks/goodreads"
 	"github.com/KyleBanks/goodreads/responses"
 	"github.com/dustin/go-humanize"
-	literalpkg "hufschlaeger.net/markscribe/internal/adapters/literal"
+	"github.com/shurcooL/githubv4"
+	"golang.org/x/oauth2"
+	githubadapter "hufschlaeger.net/markscribe/internal/adapters/github"
+	goodreadsadapter "hufschlaeger.net/markscribe/internal/adapters/goodreads"
+	literaladapter "hufschlaeger.net/markscribe/internal/adapters/literal"
+	rssadapter "hufschlaeger.net/markscribe/internal/adapters/rss"
 	domain "hufschlaeger.net/markscribe/internal/domain"
 	githubsvc "hufschlaeger.net/markscribe/internal/service/github"
 	goodreadssvc "hufschlaeger.net/markscribe/internal/service/goodreads"
@@ -25,6 +36,51 @@ type Service struct {
 
 func New(gh *githubsvc.Service, gr *goodreadssvc.Service, lit *literalsvc.Service, rss *rsssvc.Service) *Service {
 	return &Service{gh: gh, gr: gr, lit: lit, rss: rss}
+}
+
+// NewFromEnv wires all dependencies based on environment variables and returns a ready-to-use Service.
+// This consolidates startup logic so callers (like cmd/markscribe) can remain lean.
+func NewFromEnv(ctx context.Context) (*Service, error) {
+	// Tokens and settings
+	gitHubToken := os.Getenv("GITHUB_TOKEN")
+	goodReadsToken := os.Getenv("GOODREADS_TOKEN")
+	goodReadsID := os.Getenv("GOODREADS_USER_ID")
+
+	// Optional authenticated HTTP client for GitHub
+	var httpClient *http.Client
+	if len(gitHubToken) > 0 {
+		httpClient = oauth2.NewClient(ctx, oauth2.StaticTokenSource(
+			&oauth2.Token{AccessToken: gitHubToken},
+		))
+	}
+
+	// External clients
+	ghClient := githubv4.NewClient(httpClient)
+	grClient := kbgoodreads.NewClient(goodReadsToken)
+
+	// Adapters
+	ghPort := githubadapter.New(ghClient)
+	grPort := goodreadsadapter.New(grClient, goodReadsID)
+	litPort := literaladapter.New()
+	rssPort := rssadapter.New()
+
+	// Username is only available with a token; non-fatal if missing
+	username := ""
+	if len(gitHubToken) > 0 {
+		var err error
+		username, err = ghPort.ViewerLogin(ctx)
+		if err != nil {
+			return nil, fmt.Errorf("can't retrieve GitHub profile: %w", err)
+		}
+	}
+
+	// Services
+	ghSvc := githubsvc.New(ghPort, username)
+	grSvc := goodreadssvc.New(grPort)
+	litSvc := literalsvc.New(litPort)
+	rssSvc := rsssvc.New(rssPort)
+
+	return New(ghSvc, grSvc, litSvc, rssSvc), nil
 }
 
 // GitHub
@@ -51,7 +107,7 @@ func (s *Service) GoodReadsCurrentlyReading(count int) []responses.Review {
 }
 
 // Literal.club
-func (s *Service) LiteralCurrentlyReading(count int) []literalpkg.Book {
+func (s *Service) LiteralCurrentlyReading(count int) []literaladapter.Book {
 	return s.lit.CurrentlyReading(count)
 }
 
@@ -82,4 +138,35 @@ func (s *Service) Reverse(slc interface{}) interface{} {
 		swap(i, j)
 	}
 	return slc
+}
+
+// Funcs returns the template FuncMap with all functions exposed by the service.
+func (s *Service) Funcs() texttmpl.FuncMap {
+	return texttmpl.FuncMap{
+		// GitHub
+		"recentContributions": s.RecentContributions,
+		"recentPullRequests":  s.RecentPullRequests,
+		"recentRepos":         s.RecentRepos,
+		"recentForks":         s.RecentForks,
+		"recentReleases":      s.RecentReleases,
+		"followers":           s.Followers,
+		"recentStars":         s.RecentStars,
+		"gists":               s.Gists,
+		"recentIssues":        s.RecentIssues,
+		"sponsors":            s.Sponsors,
+		"repo":                s.Repo,
+		// RSS
+		"rss": s.LatestRssFeeds,
+		// GoodReads
+		"goodReadsReviews":          s.GoodReadsReviews,
+		"goodReadsCurrentlyReading": s.GoodReadsCurrentlyReading,
+		// Literal.club
+		"literalClubCurrentlyReading": s.LiteralCurrentlyReading,
+		// Utils
+		"humanize": s.Humanize,
+		"reverse":  s.Reverse,
+		"now":      time.Now,
+		"contains": strings.Contains,
+		"toLower":  strings.ToLower,
+	}
 }
