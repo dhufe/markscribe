@@ -6,8 +6,8 @@ push_to_ghcr:
     GITHUB_USERNAME: "dhufe"
 
   before_script:
-    - echo "$GITHUB_TOKEN" | skopeo login -u "$GITHUB_USERNAME" --password-stdin ghcr.io
-    - echo "$CI_REGISTRY_PASSWORD" | skopeo login -u "$CI_REGISTRY_USER" --password-stdin $CI_REGISTRY
+    - skopeo login -u "$GITHUB_USERNAME" --password "$GITHUB_TOKEN" ghcr.io
+    - skopeo login -u "$CI_REGISTRY_USER" --password "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
 
   script:
     - VERSION="$CI_COMMIT_TAG"
