@@ -15,3 +15,75 @@ build_project:
     expire_in: 1 hour
   except:
     - main
+
+
+
+build_gitlab_devcontainer:
+  variables:
+    GITLAB_IMAGE: $CI_REGISTRY_IMAGE
+  stage: build
+  image: quay.io/podman/stable:latest
+  tags: [ docker ]
+
+  before_script:
+    - podman login -u $CI_REGISTRY_USER -p $CI_REGISTRY_PASSWORD $CI_REGISTRY
+    - ls -la /proc/sys/fs/binfmt_misc/ | grep qemu || echo "QEMU registered"
+
+  script:
+    - |
+      set -e  # Exit on error
+
+      echo "🔨 Building multi-arch images"
+      # VOLLSTÄNDIGES Cleanup: Manifests UND Images
+      echo "🧹 Cleaning up old builds..."
+      podman manifest rm $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA 2>/dev/null || true
+      podman manifest rm $GITLAB_IMAGE:latest 2>/dev/null || true
+      podman rmi $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA 2>/dev/null || true
+      podman rmi $GITLAB_IMAGE:latest 2>/dev/null || true
+
+      # Sicherstellen dass nichts mehr da ist
+      echo "📋 Checking local state..."
+      podman images | grep "$CI_COMMIT_SHORT_SHA" || echo "✅ Clean slate"
+
+      # Manifest erstellen
+      echo "📋 Creating new manifest..."
+      podman manifest create $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA
+
+      # AMD64 Build
+      echo ""
+      echo "📦 Building AMD64..."
+      podman build \
+      --platform linux/amd64 \
+      --manifest $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA \
+      --file Dockerfile \
+      .
+
+      echo "✅ AMD64 build successful"
+
+      # ARM64 Build
+      echo ""
+      echo "📦 Building ARM64 (this may take longer)..."
+      podman build \
+      --platform linux/arm64 \
+      --manifest $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA \
+      --file Dockerfile \
+      .
+
+      echo "✅ ARM64 build successful"
+
+      # Push mit Commit SHA
+        echo ""
+        echo "📤 Pushing manifest with commit SHA tag..."
+        podman manifest push --all \
+        $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA \
+        docker://$GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA
+
+      # Für "latest" das gleiche Manifest erneut pushen (nicht neu erstellen!)
+        echo ""
+        echo "📤 Pushing same manifest as latest tag..."
+        podman manifest push --all \
+        $GITLAB_IMAGE:$CI_COMMIT_SHORT_SHA \
+        docker://$GITLAB_IMAGE:latest
+
+      echo ""
+      echo "✅ Build and push completed!"
