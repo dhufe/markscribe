@@ -5,6 +5,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strings"
 	texttmpl "text/template"
 
 	templatesvc "hufschlaeger.net/markscribe/internal/service/template"
@@ -17,12 +18,44 @@ var (
 func main() {
 	flag.Parse()
 
-	if len(flag.Args()) == 0 {
-		fmt.Println("Usage: markscribe [template]")
+	// Support placing -write after the template argument by scanning remaining args.
+	args := flag.Args()
+	var (
+		templatePath  string
+		writeOverride string
+	)
+	for i := 0; i < len(args); i++ {
+		a := args[i]
+		switch {
+		case a == "-write" || a == "--write":
+			if i+1 >= len(args) {
+				fmt.Println("Missing value for -write")
+				os.Exit(1)
+			}
+			writeOverride = args[i+1]
+			i++ // consume value
+		case strings.HasPrefix(a, "-write="):
+			writeOverride = strings.TrimPrefix(a, "-write=")
+		case strings.HasPrefix(a, "--write="):
+			writeOverride = strings.TrimPrefix(a, "--write=")
+		default:
+			if templatePath == "" {
+				templatePath = a
+			}
+		}
+	}
+
+	if templatePath == "" {
+		fmt.Println("Usage: markscribe [template] [-write output]\nExamples:\n  markscribe README.md.tpl\n  markscribe README.md.tpl -write README.md")
 		os.Exit(1)
 	}
 
-	tplIn, err := os.ReadFile(flag.Args()[0])
+	if writeOverride != "" && *write == "" {
+		// allow override only if not already set via flags
+		*write = writeOverride
+	}
+
+	tplIn, err := os.ReadFile(templatePath)
 	if err != nil {
 		fmt.Println("Can't read file:", err)
 		os.Exit(1)
@@ -43,6 +76,7 @@ func main() {
 	}
 
 	w := os.Stdout
+
 	if len(*write) > 0 {
 		f, err := os.Create(*write)
 		if err != nil {
