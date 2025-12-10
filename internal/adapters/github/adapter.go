@@ -164,7 +164,7 @@ type recentContributionsQuery struct {
 			Edges []struct {
 				Node qlRepository
 			}
-		} `graphql:"repositories(first: 100, privacy: PUBLIC, isFork: true, ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER], orderBy: {field: PUSHED_AT, direction: DESC})"`
+		} `graphql:"repositories(first: 100, privacy: PUBLIC, isFork: false, ownerAffiliations: [OWNER, COLLABORATOR, ORGANIZATION_MEMBER], orderBy: {field: PUSHED_AT, direction: DESC})"`
 	} `graphql:"user(login: $username)"`
 }
 
