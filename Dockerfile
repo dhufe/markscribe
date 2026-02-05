@@ -1,5 +1,5 @@
 # Build auf der nativen Plattform des Runners (amd64)
-FROM golang:1.25.6-alpine3.23 AS build
+FROM golang:1.25.7-alpine3.23 AS build
 
 ARG TARGETOS=linux
 ARG TARGETARCH
