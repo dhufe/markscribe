@@ -3,34 +3,35 @@ push_to_ghcr:
   stage: release
   tags: [docker]
   variables:
-    GITHUB_USERNAME: "dhufe"
-
+    GITHUB_USERNAME: "dhufe"  # Oder über CI/CD-Variable setzen
   before_script:
-    - skopeo login -u "$GITHUB_USERNAME" --password "$GITHUB_TOKEN" ghcr.io
-    - skopeo login -u "$CI_REGISTRY_USER" --password "$CI_REGISTRY_PASSWORD" $CI_REGISTRY
+    - skopeo login -u "$GITHUB_USER" --password $GITHUB_TOKEN ghcr.io
+    - skopeo login -u "$CI_REGISTRY_USER" --password $CI_REGISTRY_PASSWORD $CI_REGISTRY
 
   script:
-    - VERSION="$CI_COMMIT_TAG"
-    - echo "🔄 Copying multi-arch image from GitLab to GHCR"
-    - echo "   Source:$GITLAB_IMAGE:$VERSION"
-    - echo "   Target:$GITHUB_IMAGE:$VERSION"
     - |
+      set -e
+      
+      VERSION="$CI_COMMIT_TAG"
+      
+      echo "🔄 Copying multi-arch image from GitLab to GHCR"
+      echo "   Source: $GITLAB_IMAGE:$VERSION"
+      echo "   Target: $GITHUB_IMAGE:$VERSION"
+      
       # Copy mit --all für multi-arch support
       skopeo copy --all \
         docker://$GITLAB_IMAGE:$VERSION \
         docker://$GITHUB_IMAGE:$VERSION
-    - echo "📌 Tagging as latest..."
-    - |
+      
+      echo "📌 Tagging as latest..."
       skopeo copy --all \
         docker://$GITLAB_IMAGE:$VERSION \
         docker://$GITHUB_IMAGE:latest
-    - echo ""
-    - echo "✅ Published to GHCR:"
-    - echo "   📦 $GITHUB_IMAGE:$VERSION"
-    - echo "   📌 $GITHUB_IMAGE:latest"
-    - echo ""
-    - echo "🔍 Verify with:"
-    - echo "   docker pull $GITHUB_IMAGE:$VERSION"
+      
+      echo ""
+      echo "✅ Published to GHCR:"
+      echo "   📦 $GITHUB_IMAGE:$VERSION"
+      echo "   📌 $GITHUB_IMAGE:latest"
 
   rules:
     - if: '$CI_COMMIT_TAG'
